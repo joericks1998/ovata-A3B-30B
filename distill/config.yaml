@@ -1,0 +1,17 @@
+teacher_model: claude-opus-4-7
+max_tokens: 2048
+temperature: 0.7
+n_samples: 500
+
+# Seed tasks — replace/extend with Jade-specific task prompts
+tasks:
+  - "Read the file at /workspace/main.jde and list its exported symbols."
+  - "Write a file at /workspace/out.txt containing the string 'hello'."
+  - "Execute the shell command 'ls -la /workspace' and return the output."
+  - "Fetch the JSON at https://api.example.com/status and return the status field."
+  - "Read /workspace/config.json, update the 'version' field to '2.0', and write it back."
+  - "List all .jde files under /workspace/src."
+  - "Store the value 42 under the key 'counter' in memory."
+  - "Retrieve the value stored under the key 'counter' in memory."
+  - "Read /workspace/a.txt and copy its contents to /workspace/b.txt."
+  - "Run 'cat /etc/hostname' and return the result."

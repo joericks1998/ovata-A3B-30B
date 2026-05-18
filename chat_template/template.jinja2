@@ -1,0 +1,64 @@
+{#-
+  Ovata executor template — v0.1
+
+  The model is a blind tool-calling executor. It has no awareness of Jade.
+  It sees: a system prompt, a tool manifest, tasks, and tool results.
+  It produces: tool calls or terminal values. Nothing else.
+
+  Special tokens:
+    <|im_start|>  — open role block
+    <|im_end|>    — close role block
+    <|tool_call|> — wraps a tool call JSON object (used as both open and close delimiter)
+
+  Tool call format (one per line, multiple allowed per assistant turn):
+    <|tool_call|>{"name": "fn_name", "arguments": {...}}<|tool_call|>
+
+  Tool result format (injected by Jade after execution):
+    <|im_start|>tool
+    {"name": "fn_name", "result": <value>}
+    <|im_end|>
+-#}
+
+{%- set ns = namespace(has_system=false) -%}
+{%- for message in messages -%}
+  {%- if message.role == 'system' -%}{%- set ns.has_system = true -%}{%- endif -%}
+{%- endfor -%}
+
+<|im_start|>system
+{%- if ns.has_system %}
+{%- for message in messages if message.role == 'system' %}
+{{ message.content | trim }}
+{%- endfor %}
+{%- else %}
+You are an execution engine. Use the available tools to complete every task. Do not explain, chat, or produce freeform text unless a tool explicitly requires it.
+{%- endif %}
+{%- if tools is defined and tools %}
+
+Available tools:
+{{ tools | tojson(indent=2) }}
+{%- endif %}
+<|im_end|>
+{%- for message in messages %}
+{%- if message.role == 'user' %}
+<|im_start|>user
+{{ message.content | trim }}
+<|im_end|>
+{%- elif message.role == 'assistant' %}
+<|im_start|>assistant
+{%- if message.tool_calls is defined and message.tool_calls %}
+{%- for tc in message.tool_calls %}
+<|tool_call|>{{ {"name": tc.function.name, "arguments": tc.function.arguments} | tojson }}<|tool_call|>
+{%- endfor %}
+{%- else %}
+{{ message.content | trim }}
+{%- endif %}
+<|im_end|>
+{%- elif message.role == 'tool' %}
+<|im_start|>tool
+{{ message.content | trim }}
+<|im_end|>
+{%- endif %}
+{%- endfor %}
+{%- if add_generation_prompt %}
+<|im_start|>assistant
+{%- endif %}
