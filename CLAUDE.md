@@ -26,7 +26,8 @@ Distill + SFT Qwen3-30B-A3B-Instruct onto a custom Jade-compatible executor temp
 
 ```bash
 # 1. Generate distillation dataset (requires ANTHROPIC_API_KEY)
-python distill/generate.py --config distill/config.yaml
+python -m distill.generate --config distill/config.yaml
+python -m distill.generate --config distill/config.yaml --append  # resume a run
 
 # 2. Pre-process raw samples into training format (add as needed)
 # python scripts/preprocess.py ...
