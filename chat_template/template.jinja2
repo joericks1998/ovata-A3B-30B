@@ -1,21 +1,29 @@
 {#-
-  Ovata executor template — v0.1
+  Ovata executor template — v0.2
 
   The model is a blind tool-calling executor. It has no awareness of Jade.
   It sees: a system prompt, a tool manifest, tasks, and tool results.
   It produces: tool calls or terminal values. Nothing else.
 
-  Special tokens:
-    <|im_start|>  — open role block
-    <|im_end|>    — close role block
-    <|tool_call|> — wraps a tool call JSON object (used as both open and close delimiter)
+  Special tokens (new, must be added to Qwen3-Base vocab):
+    <system>        — open system block (pre-filled by Jade)
+    <user>          — open user block (pre-filled by Jade)
+    <model>         — open model block (pre-filled as generation prompt)
+    <tool_response> — open tool result block (pre-filled by Jade)
+    <call_tool:     — tool call prefix (model writes)
 
-  Tool call format (one per line, multiple allowed per assistant turn):
-    <|tool_call|>{"name": "fn_name", "arguments": {...}}<|tool_call|>
+  Already in Qwen3 vocab:
+    <|im_end|>      — universal block closer
+
+  Tool call format (one per line, multiple allowed per model turn):
+    <call_tool: "tool_name", arg0, arg1, ...>
+
+  Args are positional. Grammar enforcement at inference time constrains
+  tool name to the manifest and args to each tool's schema.
 
   Tool result format (injected by Jade after execution):
-    <|im_start|>tool
-    {"name": "fn_name", "result": <value>}
+    <tool_response>
+    result_value
     <|im_end|>
 -#}
 
@@ -23,14 +31,13 @@
 {%- for message in messages -%}
   {%- if message.role == 'system' -%}{%- set ns.has_system = true -%}{%- endif -%}
 {%- endfor -%}
-
-<|im_start|>system
+<system>
 {%- if ns.has_system %}
 {%- for message in messages if message.role == 'system' %}
 {{ message.content | trim }}
 {%- endfor %}
 {%- else %}
-You are an execution engine. Use the available tools to complete every task. Do not explain, chat, or produce freeform text unless a tool explicitly requires it.
+You are an execution engine. Use the available tools to complete every task.
 {%- endif %}
 {%- if tools is defined and tools %}
 
@@ -40,25 +47,25 @@ Available tools:
 <|im_end|>
 {%- for message in messages %}
 {%- if message.role == 'user' %}
-<|im_start|>user
+<user>
 {{ message.content | trim }}
 <|im_end|>
 {%- elif message.role == 'assistant' %}
-<|im_start|>assistant
+<model>
 {%- if message.tool_calls is defined and message.tool_calls %}
 {%- for tc in message.tool_calls %}
-<|tool_call|>{{ {"name": tc.function.name, "arguments": tc.function.arguments} | tojson }}<|tool_call|>
+<call_tool: "{{ tc.function.name }}"{% if tc.function.arguments is sequence and tc.function.arguments is not string %}{% for arg in tc.function.arguments %}, {{ arg | tojson }}{% endfor %}{% endif %}>
 {%- endfor %}
 {%- else %}
 {{ message.content | trim }}
 {%- endif %}
 <|im_end|>
 {%- elif message.role == 'tool' %}
-<|im_start|>tool
+<tool_response>
 {{ message.content | trim }}
 <|im_end|>
 {%- endif %}
 {%- endfor %}
 {%- if add_generation_prompt %}
-<|im_start|>assistant
+<model>
 {%- endif %}

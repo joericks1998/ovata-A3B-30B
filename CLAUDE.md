@@ -9,7 +9,7 @@ Distill + SFT Qwen3-30B-A3B-Instruct onto a custom Jade-compatible executor temp
 ## Pipeline
 
 ```
-1. chat_template/   — design the jinja2 template + GBNF grammar
+1. chat_template/   — design the jinja2 template
 2. distill/         — generate (task → tool_call_trajectory) pairs via Claude API
 3. train/           — SFT with LoRA + DeepSpeed ZeRO-3 on cloud GPUs
 4. convert/         — merge LoRA → HF → GGUF fp16 → Q4_K_M
@@ -40,7 +40,6 @@ bash convert/quantize.sh ./output/ovata-A3B-30B-f16.gguf ./output/ovata-A3B-30B-
 
 # 5. Test with llama.cpp
 llama-cli -m ./output/ovata-A3B-30B-Q4_K_M.gguf \
-          --grammar-file chat_template/grammar.gbnf \
           -p "<|im_start|>user\nhello<|im_end|>\n<|im_start|>assistant\n"
 ```
 
