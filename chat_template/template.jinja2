@@ -6,26 +6,26 @@
   It produces: tool calls or terminal values. Nothing else.
 
   Special tokens (new, must be added to Qwen3-Base vocab):
-    <system>        — open system block (pre-filled by Jade)
-    <user>          — open user block (pre-filled by Jade)
-    <model>         — open model block (pre-filled as generation prompt)
-    <tool_response> — open tool result block (pre-filled by Jade)
-    <memory>        — open memory block (pre-filled by Jade)
-    <call_tool:     — tool call prefix (model writes)
+    <|system|>        — open system block (pre-filled by Jade)
+    <|user|>          — open user block (pre-filled by Jade)
+    <|model|>         — open model block (pre-filled as generation prompt)
+    <|tool_response|> — open tool result block (pre-filled by Jade)
+    <|memory|>        — open memory block (pre-filled by Jade)
+    <|call_tool:      — tool call prefix (model writes)
 
   Already in Qwen3 vocab:
-    <|im_end|>      — universal block closer
-    <think>         — open reasoning block (model writes, inference-only — not in training data)
-    </think>        — close reasoning block
+    <|im_end|>        — universal block closer
+    <think>           — open reasoning block (model writes, inference-only — not in training data)
+    </think>          — close reasoning block
 
   Tool call format (one per line, multiple allowed per model turn):
-    <call_tool: "tool_name", arg0, arg1, ...>
+    <|call_tool: "tool_name", arg0, arg1, ...|>
 
   Args are positional. Grammar enforcement at inference time constrains
   tool name to the manifest and args to each tool's schema.
 
   Tool result format (injected by Jade after execution):
-    <tool_response>
+    <|tool_response|>
     result_value
     <|im_end|>
 -#}
@@ -34,7 +34,7 @@
 {%- for message in messages -%}
   {%- if message.role == 'system' -%}{%- set ns.has_system = true -%}{%- endif -%}
 {%- endfor -%}
-<system>
+<|system|>
 {%- if ns.has_system %}
 {%- for message in messages if message.role == 'system' %}
 {{ message.content | trim }}
@@ -50,29 +50,29 @@ Available tools:
 <|im_end|>
 {%- for message in messages %}
 {%- if message.role == 'user' %}
-<user>
+<|user|>
 {{ message.content | trim }}
 <|im_end|>
 {%- elif message.role == 'assistant' %}
-<model>
+<|model|>
 {%- if message.tool_calls is defined and message.tool_calls %}
 {%- for tc in message.tool_calls %}
-<call_tool: "{{ tc.function.name }}"{% if tc.function.arguments is sequence and tc.function.arguments is not string %}{% for arg in tc.function.arguments %}, {{ arg | tojson }}{% endfor %}{% endif %}>
+<|call_tool: "{{ tc.function.name }}"{% if tc.function.arguments is sequence and tc.function.arguments is not string %}{% for arg in tc.function.arguments %}, {{ arg | tojson }}{% endfor %}{% endif %}|>
 {%- endfor %}
 {%- else %}
 {{ message.content | trim }}
 {%- endif %}
 <|im_end|>
 {%- elif message.role == 'tool' %}
-<tool_response>
+<|tool_response|>
 {{ message.content | trim }}
 <|im_end|>
 {%- elif message.role == 'memory' %}
-<memory>
+<|memory|>
 {{ message.content | trim }}
 <|im_end|>
 {%- endif %}
 {%- endfor %}
 {%- if add_generation_prompt %}
-<model>
+<|model|>
 {%- endif %}
