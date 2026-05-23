@@ -90,8 +90,8 @@ def _args_positional(name: str, arguments: dict, tools_by_name: dict) -> list:
 def _render_call(name: str, pos_args: list) -> str:
     if pos_args:
         args_str = ", ".join(json.dumps(a) for a in pos_args)
-        return f'<call_tool: "{name}", {args_str}>'
-    return f'<call_tool: "{name}">'
+        return f'<|call_tool: "{name}", {args_str}|>'
+    return f'<|call_tool: "{name}"|>'
 
 
 def _build_system(tools: list[dict]) -> list[dict]:
