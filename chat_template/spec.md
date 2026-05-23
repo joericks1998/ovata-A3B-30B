@@ -19,6 +19,7 @@
 | `<user>` | Open user block | Jade (pre-filled) |
 | `<model>` | Open model block | Jade (generation prompt) |
 | `<tool_response>` | Open tool result block | Jade (pre-filled) |
+| `<memory>` | Open memory block | Jade (pre-filled) |
 | `<call_tool:` | Tool call prefix | Model |
 
 ### Already in Qwen3 vocab
@@ -26,6 +27,8 @@
 | Token | Role | Who writes it |
 |---|---|---|
 | `<|im_end|>` | Universal block closer | Both |
+| `<think>` | Open reasoning block | Model |
+| `</think>` | Close reasoning block | Model |
 
 ---
 
@@ -42,14 +45,26 @@ Jade controls what tools are visible per-call by varying the manifest.
 The task or instruction to execute. Typically a structured spec in Jade's loop, but the model is trained to handle natural language too.
 
 ### `<model>`
-The model's response. Must be **either**:
-- One or more tool calls — the primary case
-- A terminal result string — only when a task produces a direct scalar value
+The model's response. Structure:
 
-No mixing of tool calls and freeform text in the same turn.
+```
+<model>
+[<think>
+optional reasoning
+</think>]
+<call_tool: "name", arg0> | terminal_value
+<|im_end|>
+```
+
+- The optional `<think>...</think>` block precedes any tool calls or terminal value
+- Thinking is **inference-only** — training data contains no `<think>` blocks
+- After thinking (if any): one or more tool calls **or** a terminal result string — never both in the same turn
 
 ### `<tool_response>`
 A tool result injected by Jade after executing a call. One block per call result.
+
+### `<memory>`
+Persistent state injected by Jade at any point in context. The model reads it but never writes it. Jade controls when and what is injected — e.g. retrieved memories, prior task summaries, or scratchpad state. Multiple blocks are allowed per context.
 
 ---
 
@@ -103,5 +118,5 @@ done
 ## Open Questions
 
 - [ ] Parallel tool calls in one turn: multiple lines (current) vs. single grammar rule?
-- [ ] Should `<think>` blocks be suppressed entirely for a blind executor, or excluded from training data?
+- [x] `<think>` blocks: supported at inference, excluded from training data — thinking emerges from Qwen3-Base priors
 - [ ] Tool error format in `<tool_response>` — plain string or structured?
